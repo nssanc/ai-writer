@@ -3,10 +3,10 @@ import db from '@/lib/db';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const projectId = params.id;
+    const { id: projectId } = await params;
     const { searchParams } = new URL(request.url);
     const language = searchParams.get('language') || 'zh';
 

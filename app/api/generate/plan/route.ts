@@ -30,8 +30,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 获取项目信息
+    const projectStmt = db.prepare('SELECT name, description FROM projects WHERE id = ?');
+    const project = projectStmt.get(projectId) as any;
+    const topic = project ? `${project.name}${project.description ? ': ' + project.description : ''}` : '文献综述';
+
     // 调用AI生成撰写计划
-    const planContent = await aiService.generateReviewPlan(analysis.writing_guide);
+    const planContent = await aiService.generateReviewPlan(analysis.writing_guide, topic);
 
     // 保存到数据库
     const saveStmt = db.prepare(`

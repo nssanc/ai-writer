@@ -1,6 +1,8 @@
-import pdf from 'pdf-parse';
 import mammoth from 'mammoth';
 import fs from 'fs';
+
+// 使用动态导入pdf-parse
+const pdfParse = require('pdf-parse');
 
 /**
  * 解析PDF文件
@@ -8,7 +10,7 @@ import fs from 'fs';
 export async function parsePDF(filePath: string): Promise<string> {
   try {
     const dataBuffer = fs.readFileSync(filePath);
-    const data = await pdf(dataBuffer);
+    const data = await pdfParse(dataBuffer);
     return data.text;
   } catch (error) {
     console.error('PDF解析错误:', error);

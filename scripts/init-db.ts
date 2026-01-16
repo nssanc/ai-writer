@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { initDatabase } from '../lib/db.ts';
+import { initDatabase } from '../lib/db';
 
 console.log('Initializing database...');
 initDatabase();

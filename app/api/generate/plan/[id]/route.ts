@@ -3,10 +3,10 @@ import db from '@/lib/db';
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const planId = params.id;
+    const { id: planId } = await params;
     const body = await request.json();
     const { plan_content } = body;
 

@@ -30,6 +30,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 获取写作指南
+    const guideStmt = db.prepare(`
+      SELECT writing_guide FROM style_analysis
+      WHERE project_id = ?
+      ORDER BY created_at DESC
+      LIMIT 1
+    `);
+    const guide = guideStmt.get(projectId) as any;
+
+    // 获取参考文献列表
+    const papersStmt = db.prepare(`
+      SELECT filename FROM reference_papers
+      WHERE project_id = ?
+    `);
+    const papers = papersStmt.all(projectId) as any[];
+    const references = papers.map(p => p.filename).join('\n');
+
     // 创建流式响应
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
@@ -40,6 +57,8 @@ export async function POST(request: NextRequest) {
           // 调用AI流式写作
           for await (const chunk of aiService.streamWriteReview(
             plan.plan_content,
+            guide?.writing_guide || '',
+            references,
             language
           )) {
             fullContent += chunk;
