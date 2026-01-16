@@ -1,36 +1,128 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AI辅助文献综述写作系统
 
-## Getting Started
+一个基于Next.js和AI的智能文献综述写作系统，帮助研究人员快速完成高质量的文献综述。
 
-First, run the development server:
+## 功能特点
 
+- 📄 **文献上传与解析** - 支持PDF和Word文档自动解析
+- 🎨 **智能风格分析** - AI分析参考文献的写作风格
+- 📝 **自动生成写作指南** - 基于风格分析生成个性化写作指南
+- 📋 **综述撰写计划** - 自动生成详细的章节大纲和撰写计划
+- 🔍 **文献搜索** - 集成arXiv和PubMed搜索
+- 🤖 **AI自动写作** - 流式生成综述初稿
+- 🌐 **双语支持** - 自动生成中英文版本
+- 📤 **多格式导出** - 支持Markdown和Word格式导出
+
+## 技术栈
+
+- **前端**: Next.js 14 + React + TypeScript + Tailwind CSS
+- **后端**: Next.js API Routes
+- **数据库**: SQLite (better-sqlite3)
+- **AI**: OpenAI兼容API
+- **文档解析**: pdf-parse, mammoth
+- **部署**: Docker + GitHub Actions
+
+
+## 快速开始
+
+### 环境要求
+
+- Node.js >= 20.0.0
+- npm 或 yarn
+
+### 安装步骤
+
+1. **克隆项目**
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone <repository-url>
+cd literature-review-ai
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. **安装依赖**
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. **配置环境变量**
+```bash
+cp .env.example .env.local
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+编辑 `.env.local` 文件，填入您的API配置：
+```env
+OPENAI_API_ENDPOINT=https://api.openai.com/v1
+OPENAI_API_KEY=your_api_key_here
+OPENAI_MODEL=gpt-4
+```
 
-## Learn More
+4. **初始化数据库**
+```bash
+npm run db:init
+```
 
-To learn more about Next.js, take a look at the following resources:
+5. **启动开发服务器**
+```bash
+npm run dev
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+6. **访问应用**
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+打开浏览器访问 [http://localhost:3000](http://localhost:3000)
 
-## Deploy on Vercel
+## API接口
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 项目管理
+- `POST /api/projects` - 创建新项目
+- `GET /api/projects` - 获取项目列表
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### 文件上传
+- `POST /api/upload` - 上传参考文献（PDF/Word）
+
+### 风格分析
+- `POST /api/analyze/style` - 分析文献风格并生成写作指南
+
+### 文献搜索
+- `POST /api/search/arxiv` - 搜索arXiv论文
+- `POST /api/search/pubmed` - 搜索PubMed文献
+
+## 使用流程
+
+1. **创建项目** - 输入项目名称和描述
+2. **上传参考文献** - 上传1-2篇参考期刊文献
+3. **风格分析** - AI自动分析写作风格
+4. **查看写作指南** - 查看并编辑生成的写作指南
+5. **搜索文献** - 使用arXiv和PubMed搜索相关文献
+6. **AI写作** - 启动AI自动撰写综述
+7. **在线编辑** - 审阅和修改综述内容
+8. **导出文档** - 导出Markdown或Word格式
+
+## 项目结构
+
+```
+literature-review-ai/
+├── app/
+│   ├── api/              # API路由
+│   │   ├── projects/     # 项目管理
+│   │   ├── upload/       # 文件上传
+│   │   ├── analyze/      # 风格分析
+│   │   └── search/       # 文献搜索
+│   └── page.tsx          # 主页
+├── lib/
+│   ├── db.ts            # 数据库操作
+│   ├── ai.ts            # AI服务
+│   ├── parser.ts        # 文档解析
+│   ├── arxiv.ts         # arXiv API
+│   ├── pubmed.ts        # PubMed API
+│   └── types.ts         # 类型定义
+├── data/                # SQLite数据库
+├── uploads/             # 上传文件
+└── outputs/             # 导出文件
+```
+
+## 许可证
+
+MIT License
+
+## 贡献
+
+欢迎提交Issue和Pull Request！
