@@ -2,19 +2,36 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 
-const dbPath = process.env.DATABASE_PATH || './data/app.db';
-const dbDir = path.dirname(dbPath);
+let dbInstance: Database.Database | null = null;
 
-// 确保数据目录存在
-if (!fs.existsSync(dbDir)) {
-  fs.mkdirSync(dbDir, { recursive: true });
+function getDb(): Database.Database {
+  if (dbInstance) {
+    return dbInstance;
+  }
+
+  const dbPath = process.env.DATABASE_PATH || './data/app.db';
+  const dbDir = path.dirname(dbPath);
+
+  // 确保数据目录存在
+  if (!fs.existsSync(dbDir)) {
+    fs.mkdirSync(dbDir, { recursive: true });
+  }
+
+  // 创建数据库连接
+  dbInstance = new Database(dbPath);
+
+  // 启用外键约束
+  dbInstance.pragma('foreign_keys = ON');
+
+  return dbInstance;
 }
 
-// 创建数据库连接
-export const db = new Database(dbPath);
-
-// 启用外键约束
-db.pragma('foreign_keys = ON');
+// 导出 db 作为 getter
+export const db = new Proxy({} as Database.Database, {
+  get(target, prop) {
+    return (getDb() as any)[prop];
+  }
+});
 
 // 初始化数据库表
 export function initDatabase() {
