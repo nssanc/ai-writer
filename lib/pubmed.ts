@@ -95,7 +95,10 @@ async function parsePubmedXML(xmlData: string): Promise<PubmedPaper[]> {
  * 解析单篇PubMed文章
  */
 function parsePubmedArticle(pmid: string, articleData: any): PubmedPaper {
-  const title = articleData?.ArticleTitle?.[0] || '';
+  // 解析标题（可能是字符串或对象）
+  const titleRaw = articleData?.ArticleTitle?.[0];
+  const title = typeof titleRaw === 'string' ? titleRaw : (titleRaw?._ || '');
+
   const journal = articleData?.Journal?.[0]?.Title?.[0] || '';
 
   // 解析摘要

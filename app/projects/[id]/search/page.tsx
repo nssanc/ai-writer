@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 interface Paper {
@@ -12,16 +12,22 @@ interface Paper {
   url: string;
   pdf_url?: string;
   published?: string;
+  translatedTitle?: string;
+  translatedAbstract?: string;
 }
 
 export default function SearchPage() {
   const params = useParams();
+  const router = useRouter();
   const projectId = params.id as string;
 
   const [query, setQuery] = useState('');
   const [source, setSource] = useState<'arxiv' | 'pubmed'>('arxiv');
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState<Paper[]>([]);
+  const [selectedPapers, setSelectedPapers] = useState<Set<number>>(new Set());
+  const [translating, setTranslating] = useState<Set<number>>(new Set());
+  const [saving, setSaving] = useState(false);
 
   const handleSearch = async () => {
     if (!query.trim()) {
@@ -31,6 +37,7 @@ export default function SearchPage() {
 
     setSearching(true);
     setResults([]);
+    setSelectedPapers(new Set());
 
     try {
       const endpoint = source === 'arxiv' ? '/api/search/arxiv' : '/api/search/pubmed';
@@ -51,6 +58,95 @@ export default function SearchPage() {
       alert('搜索失败，请重试');
     } finally {
       setSearching(false);
+    }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedPapers.size === results.length) {
+      setSelectedPapers(new Set());
+    } else {
+      setSelectedPapers(new Set(results.map((_, index) => index)));
+    }
+  };
+
+  const toggleSelect = (index: number) => {
+    const newSelected = new Set(selectedPapers);
+    if (newSelected.has(index)) {
+      newSelected.delete(index);
+    } else {
+      newSelected.add(index);
+    }
+    setSelectedPapers(newSelected);
+  };
+
+  const translatePaper = async (index: number) => {
+    const paper = results[index];
+    if (paper.translatedTitle && paper.translatedAbstract) {
+      return;
+    }
+
+    setTranslating(new Set(translating).add(index));
+
+    try {
+      const response = await fetch('/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: paper.title,
+          abstract: paper.abstract,
+        }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        const newResults = [...results];
+        newResults[index] = {
+          ...paper,
+          translatedTitle: data.data.title,
+          translatedAbstract: data.data.abstract,
+        };
+        setResults(newResults);
+      } else {
+        alert('翻译失败: ' + (data.error || '未知错误'));
+      }
+    } catch (error) {
+      console.error('翻译失败:', error);
+      alert('翻译失败，请重试');
+    } finally {
+      const newTranslating = new Set(translating);
+      newTranslating.delete(index);
+      setTranslating(newTranslating);
+    }
+  };
+
+  const saveSelectedPapers = async () => {
+    if (selectedPapers.size === 0) {
+      alert('请至少选择一篇文献');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const selectedData = Array.from(selectedPapers).map(index => results[index]);
+
+      const response = await fetch(`/api/projects/${projectId}/literature`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ papers: selectedData }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        alert(`成功保存 ${selectedPapers.size} 篇文献！`);
+        router.push(`/projects/${projectId}`);
+      } else {
+        alert('保存失败: ' + (data.error || '未知错误'));
+      }
+    } catch (error) {
+      console.error('保存失败:', error);
+      alert('保存失败，请重试');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -130,45 +226,104 @@ export default function SearchPage() {
         {/* 搜索结果 */}
         {results.length > 0 && (
           <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">
-              搜索结果 ({results.length})
-            </h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-gray-900">
+                搜索结果 ({results.length})
+              </h2>
+              <div className="flex space-x-3">
+                <button
+                  onClick={toggleSelectAll}
+                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                >
+                  {selectedPapers.size === results.length ? '取消全选' : '全选'}
+                </button>
+                <button
+                  onClick={saveSelectedPapers}
+                  disabled={saving || selectedPapers.size === 0}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                >
+                  {saving ? '保存中...' : `保存选中 (${selectedPapers.size})`}
+                </button>
+              </div>
+            </div>
+
             <div className="space-y-4">
               {results.map((paper, index) => (
-                <div key={index} className="border-b border-gray-200 pb-4 last:border-b-0">
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">
-                    {paper.title}
-                  </h3>
-                  <p className="text-sm text-gray-600 mb-2">
-                    {paper.authors}
-                  </p>
-                  {paper.published && (
-                    <p className="text-sm text-gray-500 mb-2">
-                      发表时间: {paper.published}
-                    </p>
-                  )}
-                  <p className="text-sm text-gray-700 mb-3 line-clamp-3">
-                    {paper.abstract}
-                  </p>
-                  <div className="flex space-x-3">
-                    <a
-                      href={paper.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-700 text-sm"
-                    >
-                      查看详情 →
-                    </a>
-                    {paper.pdf_url && (
-                      <a
-                        href={paper.pdf_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:text-blue-700 text-sm"
-                      >
-                        下载PDF →
-                      </a>
-                    )}
+                <div key={index} className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-start space-x-3">
+                    <input
+                      type="checkbox"
+                      checked={selectedPapers.has(index)}
+                      onChange={() => toggleSelect(index)}
+                      className="mt-1 h-4 w-4 text-blue-600 rounded"
+                    />
+                    <div className="flex-1">
+                      <div className="mb-3">
+                        <div className="flex justify-between items-start mb-2">
+                          <h3 className="text-lg font-medium text-gray-900 flex-1">
+                            {paper.translatedTitle || paper.title}
+                          </h3>
+                          <button
+                            onClick={() => translatePaper(index)}
+                            disabled={translating.has(index)}
+                            className="ml-3 px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200 disabled:bg-gray-100 disabled:text-gray-400"
+                          >
+                            {translating.has(index) ? '翻译中...' : paper.translatedTitle ? '已翻译' : '翻译'}
+                          </button>
+                        </div>
+                        {paper.translatedTitle && (
+                          <p className="text-sm text-gray-500 italic">
+                            原标题: {paper.title}
+                          </p>
+                        )}
+                      </div>
+
+                      <p className="text-sm text-gray-600 mb-2">
+                        作者: {paper.authors}
+                      </p>
+                      {paper.published && (
+                        <p className="text-sm text-gray-500 mb-2">
+                          发表时间: {paper.published}
+                        </p>
+                      )}
+
+                      <div className="mb-3">
+                        <p className="text-sm text-gray-700">
+                          {paper.translatedAbstract || paper.abstract}
+                        </p>
+                        {paper.translatedAbstract && (
+                          <details className="mt-2">
+                            <summary className="text-sm text-gray-500 cursor-pointer">
+                              查看原文摘要
+                            </summary>
+                            <p className="text-sm text-gray-600 mt-1 italic">
+                              {paper.abstract}
+                            </p>
+                          </details>
+                        )}
+                      </div>
+
+                      <div className="flex space-x-3">
+                        <a
+                          href={paper.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-700 text-sm"
+                        >
+                          查看详情 →
+                        </a>
+                        {paper.pdf_url && (
+                          <a
+                            href={paper.pdf_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:text-blue-700 text-sm"
+                          >
+                            下载PDF →
+                          </a>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}
