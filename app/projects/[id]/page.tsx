@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import WorkflowProgress from '@/components/WorkflowProgress';
 
 interface Project {
   id: number;
@@ -336,6 +337,14 @@ export default function ProjectDetail() {
                 </Link>
               </div>
             </div>
+
+            {/* 工作流程 */}
+            <WorkflowProgress
+              projectId={projectId}
+              hasPapers={papers.length > 0}
+              hasAnalysis={styleAnalysis !== null}
+              hasPlan={false}
+            />
           </div>
         </div>
       </main>
