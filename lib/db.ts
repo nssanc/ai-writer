@@ -154,6 +154,18 @@ export function initDatabase() {
     )
   `);
 
+  // 创建writing_phrases表（学术用语库）
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS writing_phrases (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      category TEXT NOT NULL,
+      phrase TEXT NOT NULL,
+      usage TEXT,
+      example TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
   console.log('Database initialized successfully');
 }
 
