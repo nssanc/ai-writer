@@ -53,13 +53,13 @@ docker-compose up -d
 
 打开浏览器访问 [http://localhost:3333](http://localhost:3333)
 
-### 方式2：使用 Docker Hub 镜像
+### 方式2：使用 GitHub Container Registry 镜像
 
-支持多架构镜像（amd64, arm64, arm/v7）：
+支持多架构镜像（amd64, arm64, arm/v7），无需配置任何密码：
 
 ```bash
 # 拉取镜像
-docker pull <your-dockerhub-username>/literature-review-ai:latest
+docker pull ghcr.io/nssanc/ai-writer:latest
 
 # 运行容器
 docker run -d \
@@ -70,7 +70,13 @@ docker run -d \
   -e OPENAI_API_ENDPOINT=https://api.openai.com/v1 \
   -e OPENAI_API_KEY=your_api_key_here \
   -e OPENAI_MODEL=gpt-4 \
-  <your-dockerhub-username>/literature-review-ai:latest
+  ghcr.io/nssanc/ai-writer:latest
+```
+
+或者直接使用 docker-compose（推荐）：
+```bash
+# docker-compose.yml 已配置好镜像地址
+docker-compose up -d
 ```
 
 ### 方式3：本地开发
@@ -167,23 +173,22 @@ npm run dev
 
 ## GitHub Actions 自动构建
 
-项目配置了自动构建多架构 Docker 镜像的 CI/CD 流程。
+项目配置了自动构建多架构 Docker 镜像并推送到 GitHub Container Registry 的 CI/CD 流程。
 
-### 配置步骤
+### 特点
 
-1. **在 GitHub 仓库设置 Secrets**
+- ✅ **无需配置密码** - 使用 GitHub 内置的 GITHUB_TOKEN
+- ✅ **自动推送到 ghcr.io** - GitHub Container Registry
+- ✅ **多架构支持** - amd64, arm64, arm/v7
+- ✅ **公开访问** - 任何人都可以拉取镜像
 
-进入仓库的 Settings → Secrets and variables → Actions，添加：
-- `DOCKER_USERNAME` - Docker Hub 用户名
-- `DOCKER_PASSWORD` - Docker Hub 密码或访问令牌
-
-2. **自动构建触发条件**
+### 自动构建触发条件
 
 - 推送到 `main` 分支
 - 创建新的 tag（如 `v1.0.0`）
-- 创建 Pull Request
+- 创建 Pull Request（仅构建，不推送）
 
-3. **支持的架构**
+### 支持的架构
 
 - `linux/amd64` - x86_64 架构（Intel/AMD）
 - `linux/arm64` - ARM 64位架构（Apple Silicon, 树莓派4等）
@@ -191,9 +196,17 @@ npm run dev
 
 ### 镜像标签
 
-- `latest` - 最新的 main 分支构建
-- `main` - main 分支构建
-- `v1.0.0` - 版本标签构建
+- `ghcr.io/nssanc/ai-writer:latest` - 最新的 main 分支构建
+- `ghcr.io/nssanc/ai-writer:main` - main 分支构建
+- `ghcr.io/nssanc/ai-writer:v1.0.0` - 版本标签构建
+
+### 查看构建状态
+
+访问：https://github.com/nssanc/ai-writer/actions
+
+### 查看已发布的镜像
+
+访问：https://github.com/nssanc/ai-writer/pkgs/container/ai-writer
 
 ## 项目结构
 

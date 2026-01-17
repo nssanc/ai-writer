@@ -2,7 +2,9 @@ version: '3.8'
 
 services:
   app:
-    build: .
+    image: ghcr.io/nssanc/ai-writer:latest
+    # 如果要本地构建，注释上面一行，取消注释下面一行
+    # build: .
     ports:
       - "3333:3000"
     volumes:
