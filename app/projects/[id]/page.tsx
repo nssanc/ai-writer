@@ -27,6 +27,25 @@ interface StyleAnalysis {
   created_at: string;
 }
 
+interface ReviewPlan {
+  id: number;
+  plan_content: string;
+  version: number;
+  created_at: string;
+}
+
+interface SearchedLiterature {
+  id: number;
+  title: string;
+  source: string;
+}
+
+interface ReviewDraft {
+  id: number;
+  content: string;
+  language: string;
+}
+
 export default function ProjectDetail() {
   const params = useParams();
   const router = useRouter();
@@ -35,9 +54,57 @@ export default function ProjectDetail() {
   const [project, setProject] = useState<Project | null>(null);
   const [papers, setPapers] = useState<ReferencePaper[]>([]);
   const [styleAnalysis, setStyleAnalysis] = useState<StyleAnalysis | null>(null);
+  const [plan, setPlan] = useState<ReviewPlan | null>(null);
+  const [searchedLiterature, setSearchedLiterature] = useState<SearchedLiterature[]>([]);
+  const [drafts, setDrafts] = useState<ReviewDraft[]>([]);
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
   const [analysisProgress, setAnalysisProgress] = useState('');
+
+  const handleDeleteLiterature = async (literatureId: number) => {
+    if (!confirm('确定要删除这篇文献吗？')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/projects/${projectId}/literature?id=${literatureId}`, {
+        method: 'DELETE',
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        fetchProjectData();
+      } else {
+        alert('删除失败: ' + (data.error || '未知错误'));
+      }
+    } catch (error) {
+      console.error('删除文献失败:', error);
+      alert('删除文献失败，请重试');
+    }
+  };
+
+  const handleClearAllLiterature = async () => {
+    if (!confirm(`确定要清除所有 ${searchedLiterature.length} 篇文献吗？此操作不可恢复。`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/projects/${projectId}/literature/clear`, {
+        method: 'DELETE',
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        fetchProjectData();
+        alert('已清除所有文献');
+      } else {
+        alert('清除失败: ' + (data.error || '未知错误'));
+      }
+    } catch (error) {
+      console.error('清除文献失败:', error);
+      alert('清除文献失败，请重试');
+    }
+  };
 
   useEffect(() => {
     fetchProjectData();
@@ -62,6 +129,33 @@ export default function ProjectDetail() {
       if (analysisData.success && analysisData.data) {
         setStyleAnalysis(analysisData.data);
       }
+
+      const planRes = await fetch(`/api/projects/${projectId}/plan`);
+      const planData = await planRes.json();
+      if (planData.success && planData.data) {
+        setPlan(planData.data);
+      }
+
+      const literatureRes = await fetch(`/api/projects/${projectId}/literature`);
+      const literatureData = await literatureRes.json();
+      if (literatureData.success && literatureData.data) {
+        setSearchedLiterature(literatureData.data);
+      }
+
+      // Check if any draft exists (check both languages)
+      const draftZhRes = await fetch(`/api/projects/${projectId}/draft?language=zh`);
+      const draftZhData = await draftZhRes.json();
+      const draftEnRes = await fetch(`/api/projects/${projectId}/draft?language=en`);
+      const draftEnData = await draftEnRes.json();
+
+      const allDrafts = [];
+      if (draftZhData.success && draftZhData.data) {
+        allDrafts.push(draftZhData.data);
+      }
+      if (draftEnData.success && draftEnData.data) {
+        allDrafts.push(draftEnData.data);
+      }
+      setDrafts(allDrafts);
     } catch (error) {
       console.error('获取项目数据失败:', error);
     } finally {
@@ -72,6 +166,11 @@ export default function ProjectDetail() {
   const handleAnalyzeStyle = async () => {
     if (papers.length === 0) {
       alert('请先上传参考文献');
+      return;
+    }
+
+    // 如果已有分析结果，提示用户确认
+    if (styleAnalysis && !confirm('已有风格分析结果，确定要重新生成吗？这将覆盖现有内容。')) {
       return;
     }
 
@@ -191,7 +290,7 @@ export default function ProjectDetail() {
             <div className="bg-white rounded-lg shadow p-6">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-semibold text-gray-900">
-                  参考文献
+                  参照文献（风格分析样本）
                 </h2>
                 <Link
                   href={`/projects/${projectId}/upload`}
@@ -203,8 +302,8 @@ export default function ProjectDetail() {
 
               {papers.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
-                  <p className="mb-2">还没有上传参考文献</p>
-                  <p className="text-sm">请上传1-2篇参考期刊文献用于风格分析</p>
+                  <p className="mb-2">还没有上传参照文献</p>
+                  <p className="text-sm">请上传1-2篇参照期刊文献用于风格分析</p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -242,61 +341,184 @@ export default function ProjectDetail() {
               )}
             </div>
 
-            {/* 风格分析 */}
+            {/* 搜索文献 */}
             <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                风格分析与写作指南
-              </h2>
-
-              {!styleAnalysis ? (
-                <div className="text-center py-8">
-                  <p className="text-gray-500 mb-4">还未进行风格分析</p>
-                  <button
-                    onClick={handleAnalyzeStyle}
-                    disabled={analyzing || papers.length === 0}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold text-gray-900">
+                  搜索文献 ({searchedLiterature.length})
+                </h2>
+                <div className="flex space-x-2">
+                  {searchedLiterature.length > 0 && (
+                    <button
+                      onClick={handleClearAllLiterature}
+                      className="text-red-600 hover:text-red-700 text-sm"
+                    >
+                      清除全部
+                    </button>
+                  )}
+                  <Link
+                    href={`/projects/${projectId}/search`}
+                    className="text-blue-600 hover:text-blue-700 text-sm"
                   >
-                    {analyzing ? '分析中...' : '开始风格分析'}
-                  </button>
-                  {analyzing && analysisProgress && (
-                    <div className="mt-4">
-                      <div className="flex items-center justify-center space-x-2">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                        <p className="text-sm text-blue-600">{analysisProgress}</p>
+                    + 搜索更多文献
+                  </Link>
+                </div>
+              </div>
+
+              {searchedLiterature.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <p className="mb-2">还没有搜索保存的文献</p>
+                  <p className="text-sm">使用搜索功能查找并保存相关文献</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {searchedLiterature.slice(0, 5).map((lit: any) => (
+                    <div
+                      key={lit.id}
+                      className="p-3 bg-gray-50 rounded-lg"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <p className="font-medium text-gray-900 mb-1">
+                            {lit.title}
+                          </p>
+                          <p className="text-sm text-gray-600 mb-2">
+                            {lit.authors}
+                          </p>
+                          <div className="flex items-center space-x-3 text-xs text-gray-500">
+                            <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded">
+                              {lit.source}
+                            </span>
+                            {lit.pdf_url && (
+                              <a
+                                href={lit.pdf_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:text-blue-700"
+                              >
+                                📄 PDF链接
+                              </a>
+                            )}
+                            <a
+                              href={lit.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:text-blue-700"
+                            >
+                              🔗 查看详情
+                            </a>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleDeleteLiterature(lit.id)}
+                          className="ml-3 text-red-600 hover:text-red-700 text-sm"
+                        >
+                          删除
+                        </button>
                       </div>
+                    </div>
+                  ))}
+                  {searchedLiterature.length > 5 && (
+                    <div className="text-center pt-2">
+                      <p className="text-sm text-gray-500">
+                        共 {searchedLiterature.length} 篇文献，显示前 5 篇
+                      </p>
                     </div>
                   )}
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="font-medium text-gray-900 mb-2">分析结果</h3>
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <p className="text-gray-700 whitespace-pre-wrap">
-                        {styleAnalysis.analysis_result}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="font-medium text-gray-900 mb-2">写作指南</h3>
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <p className="text-gray-700 whitespace-pre-wrap">
-                        {styleAnalysis.writing_guide}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end">
-                    <Link
-                      href={`/projects/${projectId}/guide`}
-                      className="text-blue-600 hover:text-blue-700"
-                    >
-                      编辑写作指南 →
-                    </Link>
-                  </div>
-                </div>
               )}
+            </div>
+
+            {/* 风格分析 */}
+            <div className="bg-white rounded-lg shadow overflow-hidden">
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-semibold text-gray-900">
+                    风格分析与写作指南
+                  </h2>
+                  {styleAnalysis && (
+                    <button
+                      onClick={handleAnalyzeStyle}
+                      disabled={analyzing}
+                      className="px-4 py-2 bg-white text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 disabled:bg-gray-100 disabled:text-gray-400 disabled:border-gray-300 transition-colors"
+                    >
+                      {analyzing ? '生成中...' : '🔄 重新生成'}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="p-6">
+                {!styleAnalysis ? (
+                  <div className="text-center py-8">
+                    <div className="mb-4">
+                      <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
+                    <p className="text-gray-500 mb-4">还未进行风格分析</p>
+                    <button
+                      onClick={handleAnalyzeStyle}
+                      disabled={analyzing || papers.length === 0}
+                      className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {analyzing ? '分析中...' : '开始风格分析'}
+                    </button>
+                    {analyzing && analysisProgress && (
+                      <div className="mt-4">
+                        <div className="flex items-center justify-center space-x-2">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                          <p className="text-sm text-blue-600">{analysisProgress}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div>
+                      <div className="flex items-center mb-2">
+                        <h3 className="font-medium text-gray-900">分析结果</h3>
+                      </div>
+                      <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-4 rounded-lg border border-gray-200">
+                        <p className="text-gray-700 whitespace-pre-wrap text-sm leading-relaxed">
+                          {styleAnalysis.analysis_result}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center mb-2">
+                        <h3 className="font-medium text-gray-900">写作指南</h3>
+                      </div>
+                      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
+                        <p className="text-gray-700 whitespace-pre-wrap text-sm leading-relaxed">
+                          {styleAnalysis.writing_guide}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end pt-2">
+                      <Link
+                        href={`/projects/${projectId}/guide`}
+                        className="inline-flex items-center px-4 py-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+                      >
+                        <span>编辑写作指南</span>
+                        <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </Link>
+                    </div>
+                    {analyzing && analysisProgress && (
+                      <div className="mt-2">
+                        <div className="flex items-center space-x-2">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                          <p className="text-sm text-blue-600">{analysisProgress}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -335,6 +557,12 @@ export default function ProjectDetail() {
                 >
                   开始写作
                 </Link>
+                <Link
+                  href={`/projects/${projectId}/diagram`}
+                  className="block w-full px-4 py-2 bg-orange-600 text-white text-center rounded-lg hover:bg-orange-700"
+                >
+                  🎨 AI绘制图表
+                </Link>
               </div>
             </div>
 
@@ -343,7 +571,9 @@ export default function ProjectDetail() {
               projectId={projectId}
               hasPapers={papers.length > 0}
               hasAnalysis={styleAnalysis !== null}
-              hasPlan={false}
+              hasPlan={plan !== null}
+              hasSearchedLiterature={searchedLiterature.length > 0}
+              hasDraft={drafts.length > 0}
             />
           </div>
         </div>

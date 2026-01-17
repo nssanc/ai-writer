@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+
 interface WorkflowStep {
   id: number;
   name: string;
@@ -13,6 +15,8 @@ interface WorkflowProgressProps {
   hasPapers: boolean;
   hasAnalysis: boolean;
   hasPlan: boolean;
+  hasSearchedLiterature: boolean;
+  hasDraft: boolean;
 }
 
 export default function WorkflowProgress({
@@ -20,6 +24,8 @@ export default function WorkflowProgress({
   hasPapers,
   hasAnalysis,
   hasPlan,
+  hasSearchedLiterature,
+  hasDraft,
 }: WorkflowProgressProps) {
   const steps: WorkflowStep[] = [
     {
@@ -54,21 +60,21 @@ export default function WorkflowProgress({
       id: 5,
       name: '文献搜索',
       description: '搜索和筛选相关文献',
-      status: 'pending',
+      status: hasSearchedLiterature ? 'completed' : 'pending',
       link: `/projects/${projectId}/search`,
     },
     {
       id: 6,
       name: 'AI写作',
       description: 'AI自动生成综述初稿',
-      status: 'pending',
+      status: hasDraft ? 'completed' : 'pending',
       link: `/projects/${projectId}/write`,
     },
     {
       id: 7,
       name: '审阅导出',
       description: '编辑审阅，导出文档',
-      status: 'pending',
+      status: hasDraft ? 'completed' : 'pending',
       link: `/projects/${projectId}/write`,
     },
   ];
@@ -89,7 +95,11 @@ export default function WorkflowProgress({
       <h2 className="text-xl font-semibold text-gray-900 mb-4">工作流程</h2>
       <div className="space-y-3">
         {steps.map((step, index) => (
-          <div key={step.id} className="flex items-start">
+          <Link
+            key={step.id}
+            href={step.link || '#'}
+            className="flex items-start p-3 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer border border-transparent hover:border-blue-200"
+          >
             <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-semibold">
               {step.id}
             </div>
@@ -102,7 +112,7 @@ export default function WorkflowProgress({
               </div>
               <p className="text-sm text-gray-600 mt-1">{step.description}</p>
             </div>
-          </div>
+          </Link>
         ))}
       </div>
     </div>

@@ -1,14 +1,22 @@
 import mammoth from 'mammoth';
 import fs from 'fs';
 
-// 使用动态导入pdf-parse
-const pdfParse = require('pdf-parse');
-
 /**
  * 解析PDF文件
  */
 export async function parsePDF(filePath: string): Promise<string> {
   try {
+    // 使用 require 并处理可能的 default export
+    let pdfParse;
+    try {
+      const pdfModule = require('pdf-parse');
+      pdfParse = pdfModule.default || pdfModule;
+    } catch (e) {
+      // 如果 require 失败，尝试动态导入
+      const pdfModule = await import('pdf-parse');
+      pdfParse = pdfModule.default || pdfModule;
+    }
+
     const dataBuffer = fs.readFileSync(filePath);
     const data = await pdfParse(dataBuffer);
     return data.text;

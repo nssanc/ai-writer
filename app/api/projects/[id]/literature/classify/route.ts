@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { aiService } from '@/lib/ai';
+import aiService from '@/lib/ai';
 import { db } from '@/lib/db';
 
 // AI分类文献

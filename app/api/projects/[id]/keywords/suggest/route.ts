@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { aiService } from '@/lib/ai';
+import aiService from '@/lib/ai';
 import { db } from '@/lib/db';
 
 // AI推荐关键词
@@ -19,16 +19,45 @@ export async function POST(
       );
     }
 
+    // 获取项目的写作指南
+    const guideStmt = db.prepare(`
+      SELECT writing_guide FROM style_analysis
+      WHERE project_id = ?
+      ORDER BY created_at DESC
+      LIMIT 1
+    `);
+    const guideData = guideStmt.get(projectId) as any;
+
+    // 获取项目的撰写计划
+    const planStmt = db.prepare(`
+      SELECT plan_content FROM review_plans
+      WHERE project_id = ?
+      ORDER BY created_at DESC
+      LIMIT 1
+    `);
+    const planData = planStmt.get(projectId) as any;
+
+    // 构建上下文信息
+    let contextInfo = '';
+    if (guideData?.writing_guide) {
+      contextInfo += `\n\n写作指南内容：\n${guideData.writing_guide.substring(0, 2000)}`;
+    }
+    if (planData?.plan_content) {
+      contextInfo += `\n\n撰写计划内容：\n${planData.plan_content.substring(0, 2000)}`;
+    }
+
     const prompt = `作为一个学术研究助手，请基于以下信息推荐相关的研究关键词：
 
 用户提供的关键词：${userKeywords.join(', ')}
 ${projectDescription ? `项目描述：${projectDescription}` : ''}
+${contextInfo}
 
-请推荐10-15个相关的学术关键词，包括：
+请根据上述写作指南和撰写计划的内容，推荐10-15个高度相关的学术关键词，包括：
 1. 核心概念的同义词和相关术语
 2. 相关的研究方法
 3. 相关的应用领域
 4. 相关的技术和工具
+5. 与写作指南和计划主题相关的关键词
 
 请按以下JSON格式返回（不要包含markdown代码块标记）：
 {

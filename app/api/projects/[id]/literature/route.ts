@@ -1,6 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 import db from '@/lib/db';
 
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id: projectId } = await params;
+
+    const stmt = db.prepare('SELECT * FROM searched_literature WHERE project_id = ?');
+    const literature = stmt.all(projectId);
+
+    return NextResponse.json({
+      success: true,
+      data: literature,
+    });
+  } catch (error) {
+    console.error('获取搜索文献失败:', error);
+    return NextResponse.json(
+      { success: false, error: '获取搜索文献失败' },
+      { status: 500 }
+    );
+  }
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -44,6 +67,38 @@ export async function POST(
     console.error('保存文献失败:', error);
     return NextResponse.json(
       { error: '保存文献失败' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id: projectId } = await params;
+    const { searchParams } = new URL(request.url);
+    const literatureId = searchParams.get('id');
+
+    if (!literatureId) {
+      return NextResponse.json(
+        { error: '缺少文献ID' },
+        { status: 400 }
+      );
+    }
+
+    const stmt = db.prepare('DELETE FROM searched_literature WHERE id = ? AND project_id = ?');
+    stmt.run(literatureId, projectId);
+
+    return NextResponse.json({
+      success: true,
+      message: '删除成功',
+    });
+  } catch (error) {
+    console.error('删除文献失败:', error);
+    return NextResponse.json(
+      { error: '删除文献失败' },
       { status: 500 }
     );
   }

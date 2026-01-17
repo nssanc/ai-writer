@@ -35,8 +35,34 @@ export async function POST(request: NextRequest) {
     const project = projectStmt.get(projectId) as any;
     const topic = project ? `${project.name}${project.description ? ': ' + project.description : ''}` : '文献综述';
 
+    // 获取项目关键词
+    const keywordsStmt = db.prepare(`
+      SELECT keyword, category, is_primary FROM project_keywords
+      WHERE project_id = ?
+      ORDER BY is_primary DESC, created_at ASC
+    `);
+    const keywords = keywordsStmt.all(projectId) as any[];
+
+    // 构建关键词信息
+    let keywordsInfo = '';
+    if (keywords.length > 0) {
+      const primaryKeywords = keywords.filter(k => k.is_primary === 1);
+      const secondaryKeywords = keywords.filter(k => k.is_primary === 0);
+
+      keywordsInfo = '\n\n项目关键词：\n';
+      if (primaryKeywords.length > 0) {
+        keywordsInfo += '核心关键词: ' + primaryKeywords.map(k => k.keyword).join(', ') + '\n';
+      }
+      if (secondaryKeywords.length > 0) {
+        keywordsInfo += '相关关键词: ' + secondaryKeywords.map(k => k.keyword).join(', ');
+      }
+    }
+
     // 调用AI生成撰写计划
-    const planContent = await aiService.generateReviewPlan(analysis.writing_guide, topic);
+    const planContent = await aiService.generateReviewPlan(
+      analysis.writing_guide + keywordsInfo,
+      topic
+    );
 
     // 保存到数据库
     const saveStmt = db.prepare(`

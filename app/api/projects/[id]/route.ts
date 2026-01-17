@@ -38,6 +38,15 @@ export async function DELETE(
   try {
     const { id: projectId } = await params;
 
+    // 删除相关的子表数据
+    db.prepare('DELETE FROM reference_papers WHERE project_id = ?').run(projectId);
+    db.prepare('DELETE FROM style_analysis WHERE project_id = ?').run(projectId);
+    db.prepare('DELETE FROM review_plans WHERE project_id = ?').run(projectId);
+    db.prepare('DELETE FROM searched_literature WHERE project_id = ?').run(projectId);
+    db.prepare('DELETE FROM review_drafts WHERE project_id = ?').run(projectId);
+    db.prepare('DELETE FROM project_keywords WHERE project_id = ?').run(projectId);
+
+    // 删除项目
     const stmt = db.prepare('DELETE FROM projects WHERE id = ?');
     stmt.run(projectId);
 

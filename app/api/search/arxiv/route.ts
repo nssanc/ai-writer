@@ -4,7 +4,7 @@ import { searchArxiv } from '@/lib/arxiv';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { query, maxResults = 10 } = body;
+    const { query, maxResults = 50 } = body;
 
     if (!query) {
       return NextResponse.json(

@@ -79,7 +79,7 @@ export default function UploadPage() {
             ← 返回项目
           </Link>
           <h1 className="text-3xl font-bold text-gray-900">
-            上传参考文献
+            上传参照文献
           </h1>
         </div>
       </header>
@@ -92,7 +92,7 @@ export default function UploadPage() {
 
           <div className="mb-6">
             <p className="text-gray-600 mb-4">
-              请上传参考期刊文献（PDF或Word格式），用于AI分析写作风格。
+              请上传参照期刊文献（PDF或Word格式），用于AI分析写作风格。
             </p>
             <p className="text-sm text-gray-500">
               支持格式：PDF (.pdf)、Word (.docx) | 最大文件大小：50MB

@@ -17,11 +17,13 @@ export interface PubmedPaper {
  */
 export async function searchPubmed(
   query: string,
-  maxResults: number = 10
+  maxResults: number = 10,
+  yearFrom?: string,
+  yearTo?: string
 ): Promise<PubmedPaper[]> {
   try {
     // 第一步：搜索获取PMID列表
-    const pmids = await searchPMIDs(query, maxResults);
+    const pmids = await searchPMIDs(query, maxResults, yearFrom, yearTo);
 
     if (pmids.length === 0) {
       return [];
@@ -38,13 +40,26 @@ export async function searchPubmed(
 /**
  * 搜索PMID列表
  */
-async function searchPMIDs(query: string, maxResults: number): Promise<string[]> {
+async function searchPMIDs(
+  query: string,
+  maxResults: number,
+  yearFrom?: string,
+  yearTo?: string
+): Promise<string[]> {
   const searchUrl = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi';
+
+  // 构建查询字符串，添加年限筛选
+  let searchTerm = query;
+  if (yearFrom || yearTo) {
+    const fromYear = yearFrom || '1900';
+    const toYear = yearTo || new Date().getFullYear().toString();
+    searchTerm += ` AND ${fromYear}:${toYear}[dp]`;
+  }
 
   const response = await axios.get(searchUrl, {
     params: {
       db: 'pubmed',
-      term: query,
+      term: searchTerm,
       retmax: maxResults,
       retmode: 'json',
     },
@@ -54,20 +69,40 @@ async function searchPMIDs(query: string, maxResults: number): Promise<string[]>
 }
 
 /**
- * 获取PubMed文章详细信息
+ * 获取PubMed文章详细信息（分批处理避免URL过长）
  */
 async function fetchPubmedDetails(pmids: string[]): Promise<PubmedPaper[]> {
   const fetchUrl = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi';
+  const batchSize = 100; // 每批最多100个PMID
+  const allPapers: PubmedPaper[] = [];
 
-  const response = await axios.get(fetchUrl, {
-    params: {
-      db: 'pubmed',
-      id: pmids.join(','),
-      retmode: 'xml',
-    },
-  });
+  // 分批处理PMID
+  for (let i = 0; i < pmids.length; i += batchSize) {
+    const batch = pmids.slice(i, i + batchSize);
 
-  return await parsePubmedXML(response.data);
+    try {
+      const response = await axios.get(fetchUrl, {
+        params: {
+          db: 'pubmed',
+          id: batch.join(','),
+          retmode: 'xml',
+        },
+      });
+
+      const papers = await parsePubmedXML(response.data);
+      allPapers.push(...papers);
+
+      // 添加延迟避免API速率限制（NCBI建议每秒不超过3个请求）
+      if (i + batchSize < pmids.length) {
+        await new Promise(resolve => setTimeout(resolve, 350));
+      }
+    } catch (error) {
+      console.error(`获取PMID批次 ${i}-${i + batch.length} 失败:`, error);
+      // 继续处理下一批，不中断整个流程
+    }
+  }
+
+  return allPapers;
 }
 
 /**

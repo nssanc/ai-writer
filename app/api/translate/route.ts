@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
 
     // 解析翻译结果
     const titleMatch = result.match(/标题[：:]\s*(.+?)(?=\n|$)/);
-    const abstractMatch = result.match(/摘要[：:]\s*(.+)/s);
+    const abstractMatch = result.match(/摘要[：:]\s*([\s\S]+)/);
 
     return NextResponse.json({
       success: true,

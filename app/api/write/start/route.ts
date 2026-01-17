@@ -5,7 +5,7 @@ import aiService from '@/lib/ai';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { projectId, language } = body;
+    const { projectId, language, options } = body;
 
     if (!projectId || !language) {
       return NextResponse.json(
@@ -39,13 +39,83 @@ export async function POST(request: NextRequest) {
     `);
     const guide = guideStmt.get(projectId) as any;
 
-    // 获取参考文献列表
+    // 获取参考文献列表（上传的文献）
     const papersStmt = db.prepare(`
-      SELECT filename FROM reference_papers
+      SELECT filename, extracted_text FROM reference_papers
       WHERE project_id = ?
     `);
     const papers = papersStmt.all(projectId) as any[];
-    const references = papers.map(p => p.filename).join('\n');
+
+    // 获取搜索保存的文献（只获取已选择的）
+    const literatureStmt = db.prepare(`
+      SELECT id, title, authors, abstract, doi, url, source FROM searched_literature
+      WHERE project_id = ? AND is_selected = 1
+      ORDER BY created_at
+    `);
+    const literature = literatureStmt.all(projectId) as any[];
+
+    // 获取项目关键词
+    const keywordsStmt = db.prepare(`
+      SELECT keyword, category, is_primary FROM project_keywords
+      WHERE project_id = ?
+      ORDER BY is_primary DESC, created_at ASC
+    `);
+    const keywords = keywordsStmt.all(projectId) as any[];
+
+    // 创建统一的编号文献列表
+    const numberedReferences: Array<{
+      id: number;
+      title: string;
+      authors?: string;
+      abstract?: string;
+      doi?: string;
+      url?: string;
+      source?: string;
+    }> = [];
+
+    // 添加搜索的文献到编号列表
+    literature.forEach((lit) => {
+      numberedReferences.push({
+        id: lit.id,
+        title: lit.title,
+        authors: lit.authors,
+        abstract: lit.abstract,
+        doi: lit.doi,
+        url: lit.url,
+        source: lit.source
+      });
+    });
+
+    // 构建给AI的参考文献列表（带编号）
+    let references = '## 参考文献列表（请使用编号引用）\n\n';
+    numberedReferences.forEach((ref, index) => {
+      const num = index + 1;
+      references += `[${num}] ${ref.title}\n`;
+      if (ref.authors) {
+        references += `    作者: ${ref.authors}\n`;
+      }
+      if (ref.abstract) {
+        references += `    摘要: ${ref.abstract.substring(0, 300)}...\n`;
+      }
+      if (ref.doi) {
+        references += `    DOI: ${ref.doi}\n`;
+      }
+      references += '\n';
+    });
+
+    // 添加项目关键词信息
+    if (keywords.length > 0) {
+      references += '\n## 项目关键词\n';
+      const primaryKeywords = keywords.filter(k => k.is_primary === 1);
+      const secondaryKeywords = keywords.filter(k => k.is_primary === 0);
+
+      if (primaryKeywords.length > 0) {
+        references += '\n核心关键词: ' + primaryKeywords.map(k => k.keyword).join(', ') + '\n';
+      }
+      if (secondaryKeywords.length > 0) {
+        references += '相关关键词: ' + secondaryKeywords.map(k => k.keyword).join(', ') + '\n';
+      }
+    }
 
     // 创建流式响应
     const encoder = new TextEncoder();
@@ -59,7 +129,8 @@ export async function POST(request: NextRequest) {
             plan.plan_content,
             guide?.writing_guide || '',
             references,
-            language
+            language,
+            options
           )) {
             fullContent += chunk;
             controller.enqueue(encoder.encode(chunk));

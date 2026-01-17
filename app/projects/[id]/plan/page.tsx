@@ -43,6 +43,11 @@ export default function PlanPage() {
   };
 
   const handleGenerate = async () => {
+    // 如果已有计划，提示用户确认
+    if (plan && !confirm('已有撰写计划，确定要重新生成吗？这将覆盖现有内容。')) {
+      return;
+    }
+
     setGenerating(true);
     setGenerateProgress('正在获取写作指南...');
 
@@ -116,28 +121,44 @@ export default function PlanPage() {
           >
             ← 返回项目
           </Link>
-          <h1 className="text-3xl font-bold text-gray-900">
-            综述撰写计划
-          </h1>
+          <div className="flex items-center justify-between">
+            <h1 className="text-3xl font-bold text-gray-900">
+              综述撰写计划
+            </h1>
+            {plan && (
+              <button
+                onClick={handleGenerate}
+                disabled={generating}
+                className="px-4 py-2 bg-white text-purple-600 border border-purple-600 rounded-lg hover:bg-purple-50 disabled:bg-gray-100 disabled:text-gray-400 disabled:border-gray-300 transition-colors"
+              >
+                {generating ? '生成中...' : '🔄 重新生成'}
+              </button>
+            )}
+          </div>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {!plan ? (
           <div className="bg-white rounded-lg shadow p-8 text-center">
+            <div className="mb-4">
+              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+            </div>
             <p className="text-gray-500 mb-4">还未生成撰写计划</p>
             <button
               onClick={handleGenerate}
               disabled={generating}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+              className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
             >
               {generating ? '生成中...' : '生成撰写计划'}
             </button>
             {generating && generateProgress && (
               <div className="mt-4">
                 <div className="flex items-center justify-center space-x-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                  <p className="text-sm text-blue-600">{generateProgress}</p>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600"></div>
+                  <p className="text-sm text-purple-600">{generateProgress}</p>
                 </div>
               </div>
             )}
@@ -173,20 +194,30 @@ export default function PlanPage() {
 
         {/* 操作按钮 */}
         {plan && (
-          <div className="mt-6 flex justify-end space-x-3">
-            <Link
-              href={`/projects/${projectId}`}
-              className="px-6 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
-            >
-              取消
-            </Link>
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-            >
-              {saving ? '保存中...' : '保存'}
-            </button>
+          <div className="mt-6 bg-white rounded-lg shadow p-4">
+            <div className="flex justify-between items-center">
+              <div className="flex space-x-3">
+                <Link
+                  href={`/projects/${projectId}`}
+                  className="px-6 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  取消
+                </Link>
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                >
+                  {saving ? '保存中...' : '💾 保存计划'}
+                </button>
+              </div>
+            </div>
+            {generating && generateProgress && (
+              <div className="mt-3 flex items-center justify-center space-x-2 pt-3 border-t border-gray-200">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600"></div>
+                <p className="text-sm text-purple-600">{generateProgress}</p>
+              </div>
+            )}
           </div>
         )}
       </main>
