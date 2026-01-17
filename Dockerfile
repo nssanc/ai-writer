@@ -1,7 +1,9 @@
-FROM node:20-alpine AS base
+FROM node:20-slim AS base
 
 # 安装pandoc用于Word导出
-RUN apk add --no-cache pandoc
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends pandoc && \
+    rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
