@@ -25,17 +25,66 @@
 
 ## 快速开始
 
-### 环境要求
-
-- Node.js >= 20.0.0
-- npm 或 yarn
-
-### 安装步骤
+### 方式1：使用 Docker Compose（推荐）
 
 1. **克隆项目**
 ```bash
-git clone <repository-url>
-cd literature-review-ai
+git clone https://github.com/nssanc/ai-writer.git
+cd ai-writer
+```
+
+2. **配置环境变量**
+
+创建 `.env` 文件：
+```bash
+cat > .env << 'EOF'
+OPENAI_API_ENDPOINT=https://api.openai.com/v1
+OPENAI_API_KEY=your_api_key_here
+OPENAI_MODEL=gpt-4
+EOF
+```
+
+3. **启动服务**
+```bash
+docker-compose up -d
+```
+
+4. **访问应用**
+
+打开浏览器访问 [http://localhost:3333](http://localhost:3333)
+
+### 方式2：使用 Docker Hub 镜像
+
+支持多架构镜像（amd64, arm64, arm/v7）：
+
+```bash
+# 拉取镜像
+docker pull <your-dockerhub-username>/literature-review-ai:latest
+
+# 运行容器
+docker run -d \
+  -p 3333:3000 \
+  -v $(pwd)/data:/app/data \
+  -v $(pwd)/uploads:/app/uploads \
+  -v $(pwd)/outputs:/app/outputs \
+  -e OPENAI_API_ENDPOINT=https://api.openai.com/v1 \
+  -e OPENAI_API_KEY=your_api_key_here \
+  -e OPENAI_MODEL=gpt-4 \
+  <your-dockerhub-username>/literature-review-ai:latest
+```
+
+### 方式3：本地开发
+
+**环境要求**
+- Node.js >= 20.0.0
+- npm 或 yarn
+
+**安装步骤**
+
+1. **克隆项目**
+```bash
+git clone https://github.com/nssanc/ai-writer.git
+cd ai-writer
 ```
 
 2. **安装依赖**
@@ -95,6 +144,56 @@ npm run dev
 6. **AI写作** - 启动AI自动撰写综述
 7. **在线编辑** - 审阅和修改综述内容
 8. **导出文档** - 导出Markdown或Word格式
+
+## 环境变量说明
+
+| 变量名 | 说明 | 默认值 | 必填 |
+|--------|------|--------|------|
+| `OPENAI_API_ENDPOINT` | OpenAI API 端点 | `https://api.openai.com/v1` | 是 |
+| `OPENAI_API_KEY` | OpenAI API 密钥 | - | 是 |
+| `OPENAI_MODEL` | 使用的模型 | `gpt-4` | 否 |
+| `NODE_ENV` | 运行环境 | `production` | 否 |
+| `PORT` | 服务端口（容器内） | `3000` | 否 |
+
+## 数据持久化
+
+应用使用以下目录存储数据：
+
+- `/app/data` - SQLite 数据库文件
+- `/app/uploads` - 上传的文献文件
+- `/app/outputs` - 生成的导出文件
+
+这些目录已在 docker-compose.yml 中映射到宿主机，确保数据不会因容器重启而丢失。
+
+## GitHub Actions 自动构建
+
+项目配置了自动构建多架构 Docker 镜像的 CI/CD 流程。
+
+### 配置步骤
+
+1. **在 GitHub 仓库设置 Secrets**
+
+进入仓库的 Settings → Secrets and variables → Actions，添加：
+- `DOCKER_USERNAME` - Docker Hub 用户名
+- `DOCKER_PASSWORD` - Docker Hub 密码或访问令牌
+
+2. **自动构建触发条件**
+
+- 推送到 `main` 分支
+- 创建新的 tag（如 `v1.0.0`）
+- 创建 Pull Request
+
+3. **支持的架构**
+
+- `linux/amd64` - x86_64 架构（Intel/AMD）
+- `linux/arm64` - ARM 64位架构（Apple Silicon, 树莓派4等）
+- `linux/arm/v7` - ARM 32位架构（树莓派3等）
+
+### 镜像标签
+
+- `latest` - 最新的 main 分支构建
+- `main` - main 分支构建
+- `v1.0.0` - 版本标签构建
 
 ## 项目结构
 
