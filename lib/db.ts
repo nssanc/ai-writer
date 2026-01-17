@@ -129,6 +129,31 @@ export function initDatabase() {
     )
   `);
 
+  // 创建project_keywords表
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS project_keywords (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      project_id INTEGER NOT NULL,
+      keyword TEXT NOT NULL,
+      category TEXT,
+      is_primary INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (project_id) REFERENCES projects(id)
+    )
+  `);
+
+  // 创建review_templates表
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS review_templates (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      description TEXT,
+      structure TEXT NOT NULL,
+      is_default INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
   console.log('Database initialized successfully');
 }
 
