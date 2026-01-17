@@ -63,6 +63,29 @@ export default function Home() {
     }
   };
 
+  const handleDeleteProject = async (projectId: number, projectName: string) => {
+    if (!confirm(`确定要删除项目"${projectName}"吗？此操作不可恢复。`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/projects/${projectId}`, {
+        method: 'DELETE',
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        alert('项目删除成功！');
+        fetchProjects();
+      } else {
+        alert('删除失败: ' + (data.error || '未知错误'));
+      }
+    } catch (error) {
+      console.error('删除项目失败:', error);
+      alert('删除项目失败，请重试');
+    }
+  };
+
   const getStatusText = (status: string) => {
     const statusMap: Record<string, string> = {
       draft: '草稿',
@@ -127,9 +150,21 @@ export default function Home() {
                 key={project.id}
                 className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow"
               >
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                  {project.name}
-                </h3>
+                <div className="flex justify-between items-start mb-2">
+                  <h3 className="text-xl font-semibold text-gray-900">
+                    {project.name}
+                  </h3>
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleDeleteProject(project.id, project.name);
+                    }}
+                    className="text-red-600 hover:text-red-700 text-sm"
+                    title="删除项目"
+                  >
+                    🗑️
+                  </button>
+                </div>
                 <p className="text-gray-600 mb-4 line-clamp-2">
                   {project.description || '暂无描述'}
                 </p>
@@ -148,6 +183,31 @@ export default function Home() {
             ))}
           </div>
         )}
+
+        {/* 底部导航 */}
+        <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Link
+            href="/templates"
+            className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow"
+          >
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">📋 综述模板</h3>
+            <p className="text-sm text-gray-600">查看和管理综述结构模板</p>
+          </Link>
+          <Link
+            href="/writing-assist"
+            className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow"
+          >
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">✍️ 写作辅助</h3>
+            <p className="text-sm text-gray-600">学术用语库和写作建议</p>
+          </Link>
+          <Link
+            href="/config"
+            className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow"
+          >
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">⚙️ AI 配置</h3>
+            <p className="text-sm text-gray-600">配置AI模型和API设置</p>
+          </Link>
+        </div>
       </main>
 
       {/* 创建项目模态框 */}

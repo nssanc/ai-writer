@@ -30,3 +30,26 @@ export async function GET(
     );
   }
 }
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id: projectId } = await params;
+
+    const stmt = db.prepare('DELETE FROM projects WHERE id = ?');
+    stmt.run(projectId);
+
+    return NextResponse.json({
+      success: true,
+      message: '项目删除成功',
+    });
+  } catch (error) {
+    console.error('删除项目失败:', error);
+    return NextResponse.json(
+      { success: false, error: '删除项目失败' },
+      { status: 500 }
+    );
+  }
+}
