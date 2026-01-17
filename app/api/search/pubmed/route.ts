@@ -15,9 +15,18 @@ export async function POST(request: NextRequest) {
 
     const results = await searchPubmed(query, maxResults);
 
+    // 转换数据格式，将 authors 数组转为字符串
+    const formattedResults = results.map(paper => ({
+      title: paper.title,
+      authors: paper.authors.join(', '),
+      abstract: paper.abstract,
+      url: paper.url,
+      published: paper.pubDate,
+    }));
+
     return NextResponse.json({
       success: true,
-      data: results,
+      data: formattedResults,
     });
   } catch (error) {
     console.error('PubMed搜索错误:', error);
