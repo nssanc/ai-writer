@@ -305,6 +305,12 @@ export default function ProjectDetail() {
               <h3 className="font-semibold text-gray-900 mb-4">操作</h3>
               <div className="space-y-3">
                 <Link
+                  href={`/projects/${projectId}/keywords`}
+                  className="block w-full px-4 py-2 bg-purple-600 text-white text-center rounded-lg hover:bg-purple-700"
+                >
+                  关键词管理
+                </Link>
+                <Link
                   href={`/projects/${projectId}/upload`}
                   className="block w-full px-4 py-2 bg-blue-600 text-white text-center rounded-lg hover:bg-blue-700"
                 >
