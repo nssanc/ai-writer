@@ -22,13 +22,9 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# 设置构建时环境变量
+# 设置构建时环境变量（使用新格式）
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
-# 提供默认的 API 配置，避免构建时报错
-ENV OPENAI_API_KEY=dummy_key_for_build
-ENV OPENAI_API_ENDPOINT=https://api.openai.com/v1
-ENV OPENAI_MODEL=gpt-4
 
 RUN npm run build
 
@@ -36,8 +32,8 @@ RUN npm run build
 FROM base AS runner
 WORKDIR /app
 
-ENV NODE_ENV production
-ENV NEXT_TELEMETRY_DISABLED 1
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
@@ -54,8 +50,8 @@ USER nextjs
 
 EXPOSE 3000
 
-ENV PORT 3000
-ENV HOSTNAME "0.0.0.0"
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
 
 CMD ["node", "server.js"]
 

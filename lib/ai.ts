@@ -13,9 +13,16 @@ export class AIService {
       return this.client;
     }
 
-    // 尝试从数据库获取配置
-    const stmt = db.prepare('SELECT * FROM ai_config ORDER BY id DESC LIMIT 1');
-    const config = stmt.get() as any;
+    let config: any = null;
+
+    // 尝试从数据库获取配置（构建时可能失败，使用 try-catch）
+    try {
+      const stmt = db.prepare('SELECT * FROM ai_config ORDER BY id DESC LIMIT 1');
+      config = stmt.get();
+    } catch (error) {
+      // 构建时数据库可能不存在，忽略错误
+      console.log('Database not available, using environment variables');
+    }
 
     if (config) {
       this.client = new OpenAI({
