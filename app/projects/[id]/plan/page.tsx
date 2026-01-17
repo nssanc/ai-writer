@@ -21,6 +21,7 @@ export default function PlanPage() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [generateProgress, setGenerateProgress] = useState('');
 
   useEffect(() => {
     fetchPlan();
@@ -43,6 +44,8 @@ export default function PlanPage() {
 
   const handleGenerate = async () => {
     setGenerating(true);
+    setGenerateProgress('正在获取写作指南...');
+
     try {
       const response = await fetch('/api/generate/plan', {
         method: 'POST',
@@ -50,11 +53,18 @@ export default function PlanPage() {
         body: JSON.stringify({ projectId }),
       });
 
+      setGenerateProgress('正在生成撰写计划...');
+
       const data = await response.json();
       if (data.success) {
+        setGenerateProgress('正在整理计划内容...');
         setPlan(data.data);
         setPlanContent(data.data.plan_content);
+        setGenerateProgress('计划生成完成！');
+        setTimeout(() => setGenerateProgress(''), 2000);
         alert('计划生成成功！');
+      } else {
+        alert('生成失败: ' + (data.error || '未知错误'));
       }
     } catch (error) {
       console.error('生成计划失败:', error);
@@ -123,6 +133,14 @@ export default function PlanPage() {
             >
               {generating ? '生成中...' : '生成撰写计划'}
             </button>
+            {generating && generateProgress && (
+              <div className="mt-4">
+                <div className="flex items-center justify-center space-x-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                  <p className="text-sm text-blue-600">{generateProgress}</p>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
