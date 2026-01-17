@@ -78,9 +78,17 @@ export default function Home() {
       {/* 头部 */}
       <header className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <h1 className="text-3xl font-bold text-gray-900">
-            AI辅助文献综述写作系统
-          </h1>
+          <div className="flex justify-between items-center">
+            <h1 className="text-3xl font-bold text-gray-900">
+              AI辅助文献综述写作系统
+            </h1>
+            <Link
+              href="/config"
+              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+            >
+              ⚙️ AI 配置
+            </Link>
+          </div>
         </div>
       </header>
 

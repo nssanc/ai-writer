@@ -154,13 +154,21 @@ export default function ProjectDetail() {
                 <p className="text-gray-600 mt-2">{project.description}</p>
               )}
             </div>
-            <span
-              className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(
-                project.status
-              )}`}
-            >
-              {getStatusText(project.status)}
-            </span>
+            <div className="flex items-center space-x-3">
+              <Link
+                href="/config"
+                className="px-3 py-1 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm"
+              >
+                ⚙️ AI 配置
+              </Link>
+              <span
+                className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(
+                  project.status
+                )}`}
+              >
+                {getStatusText(project.status)}
+              </span>
+            </div>
           </div>
         </div>
       </header>
