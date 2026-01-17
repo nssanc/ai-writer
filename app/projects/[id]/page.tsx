@@ -36,6 +36,7 @@ export default function ProjectDetail() {
   const [styleAnalysis, setStyleAnalysis] = useState<StyleAnalysis | null>(null);
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
+  const [analysisProgress, setAnalysisProgress] = useState('');
 
   useEffect(() => {
     fetchProjectData();
@@ -74,6 +75,8 @@ export default function ProjectDetail() {
     }
 
     setAnalyzing(true);
+    setAnalysisProgress('正在读取文献内容...');
+
     try {
       const response = await fetch('/api/analyze/style', {
         method: 'POST',
@@ -81,10 +84,17 @@ export default function ProjectDetail() {
         body: JSON.stringify({ projectId }),
       });
 
+      setAnalysisProgress('正在分析写作风格...');
+
       const data = await response.json();
       if (data.success) {
+        setAnalysisProgress('正在生成写作指南...');
         setStyleAnalysis(data.data);
+        setAnalysisProgress('分析完成！');
+        setTimeout(() => setAnalysisProgress(''), 2000);
         alert('风格分析完成！');
+      } else {
+        alert('分析失败: ' + (data.error || '未知错误'));
       }
     } catch (error) {
       console.error('风格分析失败:', error);
@@ -247,6 +257,14 @@ export default function ProjectDetail() {
                   >
                     {analyzing ? '分析中...' : '开始风格分析'}
                   </button>
+                  {analyzing && analysisProgress && (
+                    <div className="mt-4">
+                      <div className="flex items-center justify-center space-x-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                        <p className="text-sm text-blue-600">{analysisProgress}</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-4">
