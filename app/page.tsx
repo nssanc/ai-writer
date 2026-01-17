@@ -50,12 +50,16 @@ export default function Home() {
 
       const data = await response.json();
       if (data.success) {
+        alert('项目创建成功！');
         setShowCreateModal(false);
         setNewProject({ name: '', description: '' });
         fetchProjects();
+      } else {
+        alert('创建失败: ' + (data.error || '未知错误'));
       }
     } catch (error) {
       console.error('创建项目失败:', error);
+      alert('创建项目失败: ' + error);
     }
   };
 
