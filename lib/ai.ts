@@ -1,21 +1,72 @@
 import OpenAI from 'openai';
+import db from './db';
 
 export class AIService {
-  private client: OpenAI;
+  private client: OpenAI | null = null;
+  private currentModel: string = 'gpt-4';
 
-  constructor() {
-    this.client = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY || '',
-      baseURL: process.env.OPENAI_API_ENDPOINT || 'https://api.openai.com/v1',
-    });
+  /**
+   * 获取或创建 OpenAI 客户端
+   */
+  private getClient(): OpenAI {
+    if (this.client) {
+      return this.client;
+    }
+
+    // 尝试从数据库获取配置
+    const stmt = db.prepare('SELECT * FROM ai_config ORDER BY id DESC LIMIT 1');
+    const config = stmt.get() as any;
+
+    if (config) {
+      this.client = new OpenAI({
+        apiKey: config.api_key,
+        baseURL: config.api_endpoint,
+      });
+      this.currentModel = config.model_name || 'gpt-4';
+    } else {
+      // 使用环境变量作为后备
+      this.client = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY || '',
+        baseURL: process.env.OPENAI_API_ENDPOINT || 'https://api.openai.com/v1',
+      });
+      this.currentModel = process.env.OPENAI_MODEL || 'gpt-4';
+    }
+
+    return this.client;
+  }
+
+  /**
+   * 重置客户端（配置更新后调用）
+   */
+  resetClient() {
+    this.client = null;
+  }
+
+  /**
+   * 获取可用模型列表
+   */
+  async listModels(apiEndpoint: string, apiKey: string): Promise<string[]> {
+    try {
+      const tempClient = new OpenAI({
+        apiKey: apiKey,
+        baseURL: apiEndpoint,
+      });
+
+      const response = await tempClient.models.list();
+      return response.data.map((model: any) => model.id).sort();
+    } catch (error) {
+      console.error('获取模型列表失败:', error);
+      throw new Error('无法获取模型列表，请检查 API 配置');
+    }
   }
 
   /**
    * 分析文献写作风格
    */
   async analyzeStyle(text: string): Promise<string> {
-    const response = await this.client.chat.completions.create({
-      model: process.env.OPENAI_MODEL || 'gpt-4',
+    const client = this.getClient();
+    const response = await client.chat.completions.create({
+      model: this.currentModel,
       messages: [
         {
           role: 'system',
@@ -36,8 +87,9 @@ export class AIService {
    * 生成写作指南
    */
   async generateWritingGuide(styleAnalysis: string): Promise<string> {
-    const response = await this.client.chat.completions.create({
-      model: process.env.OPENAI_MODEL || 'gpt-4',
+    const client = this.getClient();
+    const response = await client.chat.completions.create({
+      model: this.currentModel,
       messages: [
         {
           role: 'system',
@@ -58,8 +110,9 @@ export class AIService {
    * 生成综述撰写计划
    */
   async generateReviewPlan(writingGuide: string, topic: string): Promise<string> {
-    const response = await this.client.chat.completions.create({
-      model: process.env.OPENAI_MODEL || 'gpt-4',
+    const client = this.getClient();
+    const response = await client.chat.completions.create({
+      model: this.currentModel,
       messages: [
         {
           role: 'system',
@@ -85,10 +138,11 @@ export class AIService {
     references: string,
     language: 'zh' | 'en'
   ): AsyncGenerator<string> {
+    const client = this.getClient();
     const languagePrompt = language === 'zh' ? '中文' : '英文';
 
-    const stream = await this.client.chat.completions.create({
-      model: process.env.OPENAI_MODEL || 'gpt-4',
+    const stream = await client.chat.completions.create({
+      model: this.currentModel,
       messages: [
         {
           role: 'system',
