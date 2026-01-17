@@ -18,11 +18,17 @@ RUN npm ci
 
 # 构建阶段
 FROM base AS builder
+WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# 设置环境变量
-ENV NEXT_TELEMETRY_DISABLED 1
+# 设置构建时环境变量
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_ENV=production
+# 提供默认的 API 配置，避免构建时报错
+ENV OPENAI_API_KEY=dummy_key_for_build
+ENV OPENAI_API_ENDPOINT=https://api.openai.com/v1
+ENV OPENAI_MODEL=gpt-4
 
 RUN npm run build
 
