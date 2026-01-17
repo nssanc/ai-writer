@@ -1,8 +1,12 @@
 FROM node:20-slim AS base
 
-# 安装pandoc用于Word导出
+# 安装必要的系统依赖
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends pandoc && \
+    apt-get install -y --no-install-recommends \
+    python3 \
+    make \
+    g++ \
+    pandoc && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
